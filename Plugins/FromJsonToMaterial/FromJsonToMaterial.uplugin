@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "FromJsonToMaterial",
+	"Description": "Plugin to transform a Json to Material",
+	"Category": "Other",
+	"CreatedBy": "Andrea Botti",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "FromJsonToMaterial",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
