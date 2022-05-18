@@ -21,7 +21,7 @@ As of now not all the material option are implemented.
 - One Minus
 - Panner
 - Power
-- Runtime Virtual TextureSample
+- Runtime Virtual Texture Sample
 - Saturate
 - Scalar Parameter
 - Sine
