@@ -1,0 +1,252 @@
+Before starting let's clarify the standard about the input node.
+Example: Node Multiply result is connected to another node input.
+The standard is this:
+- "NameOfTheNode_NumberOfTheNode.OutputNumber"
+Examples:
+- "MaterialExpressionPower_0.0" this means the first (_0) Power node created and the first output pin of the node (.0)
+- "MaterialExpressionAdd_1.0" this means the second (_1) Add node created and the first output pin of the node (.0)
+
+The creation number depends on the Json, the first ConstVar you create will have its NumberOfTheNode to _0
+
+NameOfTheNode will be written at the end of this documentation, the node that has a Name Param use that as the NameOfTheNode.
+
+Example:
+- "Color1.2" this means the Vector Parameter with the name "Color1" and the third output pin (_2)
+
+If the Input Node string is left empty this means that the node will be created and the input pin left empty will note be connected to anything
+
+"MaterialName": String (Name of the material)
+
+(Time Node)
+"Time": Integer (Number of Time node you want)
+
+(World Position Node)
+"AbsWorldPos": Integer (Number of Absolute World Position node you want)
+
+(Object Position Node)
+"ObjPosition": Integer (Number of Object Position node you want)
+
+(Constant Node)
+"ConstVar": Array of Object : 	[
+									{
+										"Value" : Float (value of the variable)
+									},
+									{
+										more...
+									}
+								]
+(Constant 2 Vector Node)
+"Const2Var": Array of Object : 	[
+									{
+										"Value1" : Float (value1 of the variable)
+										"Value2" : Float (value2 of the variable)
+									},
+									{
+										more...
+									}
+								]
+(Scalar Parameter Node)								
+"ScalarParVar": Array of Object : 	[
+										{
+											"ScalarName" : String (Name of the scalar variable)
+											"Value" : Float (value of the variable)
+										},
+										{
+											more...
+										}
+									]
+(Vector Parameter Node)								
+"Color": Array of Object : 		[
+									{
+										"ColorName" : String (Name of the Vector Parameter node)
+										"ColorVal" : Array of Float (value of the variable) [1.0, 1.0, 1.0, 1.0]
+									},
+									{
+										more...
+									}
+								]
+Operation can create multiple node type, the type created depends on the value given to the "Op" field, Possible Value:
+- "x" Multiply Node
+- "^" Append Vector Node
+- "+" Add Node
+- "-" Subtract Node
+- "/" Divide Node
+- "*" Power Node
+			
+"Operation": Array of Object : 		[
+									{
+										"A" : Float (First Value) / String Input Node 
+										"B" : Float (Second Value) / String Input Node 
+										"Op" : String (Operation type)
+									},
+									{
+										more...
+									}
+(Sine Node)							]
+"Sine": Array of Object :
+								[
+									{
+										"Period": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Constant Bias Scale Node)								
+"ConstantBias": Array of Object :
+								[
+									{
+										"Scale": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Saturate Node)								
+"Saturate": Array of Object :
+								[
+									{
+										"Value": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Panner Node)							
+"Panner": Array of Object :
+								[
+									{
+										"Coordinate": String Input Node
+										"Time": String Input Node
+										"Speed": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Linear Interpolate Node)								
+"Lerp": Array of Object :
+								[
+									{
+										"A": Float (First Value) / String Input Node
+										"B": Float (Second Value) / String Input Node
+										"Alpha": Float (Alpha Value) / String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Sphere Mask Node)								
+"SphereMask": Array of Object :
+								[
+									{
+										"A": String Input Node
+										"B": String Input Node
+										"Radius": Float (Alpha Value) / String Input Node
+										"Hardness": Float (Alpha Value) / String Input Node
+									},
+									{
+										more...
+									}
+								]
+(One Minus Node)								
+"OneMinus": Array of Object :
+								[
+									{
+										"Value": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Transform Position Node) Issue //For Now it always transform from Absolute World Position to Local Space							
+"TransformPosition": Array of Object :
+								[
+									{
+										"Value": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Component Mask Node)							
+"Mask": Array of Object :
+								[
+									{
+										"R": Integer (Value can be either 1 (true) or 0 (false))
+										"G": Integer (Value can be either 1 (true) or 0 (false))
+										"B": Integer (Value can be either 1 (true) or 0 (false))
+										"A": Integer (Value can be either 1 (true) or 0 (false))
+										"Value": String Input Node
+									},
+									{
+										more...
+									}
+								]
+(Runtime Virtual TextureSample Node)								
+"TextureSample": Array of Object :
+								[
+									{
+										"UVs": String Input Node
+										"Tex": String Input Node
+										"ApplyViewMipBias": String Input Node
+										"TexturePath": String (Path of the Texture)
+									},
+									{
+										more...
+									}
+								]
+(Custom Expression Node)
+"CustomExpression": Array of Object :
+								[
+									{
+										"Code": String (Code to execute)
+										"OutputType": Integer (Output Type) 
+										PS. OutputType (Enum name is "ECustomMaterialOutputType" search the number you want here)
+									},
+									{
+										more...
+									}
+								]
+(Material Option they are all based on Enum)
+"MaterialOption":
+					{
+						"MaterialDomain": Integer (Search the desired number in the enum "EMaterialDomain")
+						"MaterialBlendMode": Integer (Search the desired number in the enum "EBlendMode")
+						"MaterialShadingModel": Integer (Search the desired number in the enum "EMaterialShadingModel")
+					}
+(These are the end node of the Material)					
+"Appearance":
+				{
+					"BaseColor": String Input Node
+					"Metallic": String Input Node
+					"EmissiveColor": String Input Node
+					"OpacityMask": String Input Node
+				}
+				
+Name of the various node:
+- Add - MaterialExpressionAdd
+- Append Vector - MaterialExpressionAppendVector
+- Component Mask - MaterialExpressionComponentMask
+- Constant - MaterialExpressionConstant
+- Constant 2 Vector - MaterialExpressionConstant2Vector
+- Constant Bias Scale - MaterialExpressionConstantBiasScale
+- Custom Expression - MaterialExpressionCustom
+- Divide - MaterialExpressionDivide
+- Linear Interpolate - MaterialExpressionLinearInterpolate
+- Multiply - MaterialExpressionMultiply
+- Object Position - UMaterialExpressionObjectPositionWS PS. this doesn't need the number (_0) DONT use it
+- One Minus - MaterialExpressionOneMinus
+- Panner - MaterialExpressionPanner
+- Power - MaterialExpressionPower
+- Runtime Virtual Texture Sample - MaterialExpressionRuntimeVirtualTextureSample
+- Saturate - MaterialExpressionSaturate
+- Scalar Parameter - MaterialExpressionScalarParameter
+- Sine - MaterialExpressionSine
+- Sphere Mask - MaterialExpressionSphereMask
+- Subtract - MaterialExpressionSubtract
+- Time - MaterialExpressionTime
+- Transform Position - MaterialExpressionTransformPosition
+- Vector Parameter - MaterialExpressionVectorParameter
+- World Position - MaterialExpressionWorldPosition
+Check the example "ShaderDisappear" if you have doubt, in that example all this node are used.
