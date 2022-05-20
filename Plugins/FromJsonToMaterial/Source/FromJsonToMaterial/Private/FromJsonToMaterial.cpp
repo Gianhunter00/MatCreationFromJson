@@ -16,23 +16,27 @@ void FFromJsonToMaterialModule::StartupModule()
 	OperationCreator.Add("-", &FFromJsonToMaterialModule::CreateSubstract);
 	OperationCreator.Add("*", &FFromJsonToMaterialModule::CreatePower);
 	OperationCreator.Add("/", &FFromJsonToMaterialModule::CreateDivide);
+	MaterialEditor = new FromJsonToMaterialEditor();
+	FuncToBind = MaterialEditor->OnPathChosenFromDialog->CreateRaw(this, &FFromJsonToMaterialModule::CreateMaterialFromPath);
+	MaterialEditor->OnPathChosenFromDialog = &FuncToBind;
 }
 
 void FFromJsonToMaterialModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
+	OperationCreator.Empty();
 }
 
-TArray<JsonMaterialStruct> FFromJsonToMaterialModule::ParseJsonMaterialArray(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialStruct> FFromJsonToMaterialModule::ParseJsonMaterialArray(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonMaterialStruct> MaterialsArray;
+	TArray<MaterialStruct> MaterialsArray;
 	TArray<TSharedPtr<FJsonValue>> JsonMaterialsArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonMaterialsArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonMaterialsArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonMaterialStruct Mat = JsonMaterialStruct::Default();
+		MaterialStruct Mat = MaterialStruct::Default();
 		Mat.Name = ObjectJson->GetStringField("MaterialName");
 		Mat.Color = ParseJsonColorArray(ObjectJson, "Color");
 		Mat.Time = ObjectJson->GetIntegerField("Time");
@@ -53,22 +57,22 @@ TArray<JsonMaterialStruct> FFromJsonToMaterialModule::ParseJsonMaterialArray(con
 		Mat.Panner = ParseJsonPanner(ObjectJson, "Panner");
 		Mat.TextureSample = ParseJsonTextureSample(ObjectJson, "TextureSample");
 		Mat.CustomExpression = ParseJsonCustomExpression(ObjectJson, "CustomExpression");
-		Mat.MaterialOption = ParseJsonMaterialOption(ObjectJson, "MaterialOption");
+		Mat.MaterialOptions = ParseJsonMaterialOption(ObjectJson, "MaterialOption");
 		Mat.Appearance = ParseJsonAppearance(ObjectJson, "Appearance");
 		MaterialsArray.Add(Mat);
 	}
 	return MaterialsArray;
 }
 
-TArray<JsonColorStruct> FFromJsonToMaterialModule::ParseJsonColorArray(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialColorStruct> FFromJsonToMaterialModule::ParseJsonColorArray(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonColorStruct> ColorsArray;
+	TArray<MaterialColorStruct> ColorsArray;
 	TArray<TSharedPtr<FJsonValue>> JsonColorsArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonColorsArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonColorsArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonColorStruct Color;
+		MaterialColorStruct Color;
 		Color.Name = ObjectJson->GetStringField("ColorName");
 		TArray<TSharedPtr<FJsonValue>> ColorVal = ObjectJson->GetArrayField("ColorVal");
 		Color.Color = FLinearColor((float)ColorVal[0]->AsNumber(), (float)ColorVal[1]->AsNumber(), (float)ColorVal[2]->AsNumber(), (float)ColorVal[3]->AsNumber());
@@ -77,15 +81,15 @@ TArray<JsonColorStruct> FFromJsonToMaterialModule::ParseJsonColorArray(const TSh
 	return ColorsArray;
 }
 
-TArray<Json2OpStruct> FFromJsonToMaterialModule::ParseJson2OpArray(const JsonMaterialStruct Mat, const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<Material2OpStruct> FFromJsonToMaterialModule::ParseJson2OpArray(const MaterialStruct Mat, const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<Json2OpStruct> OpArray;
+	TArray<Material2OpStruct> OpArray;
 	TArray<TSharedPtr<FJsonValue>> JsonOpArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonOpArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonOpArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		Json2OpStruct Operation;
+		Material2OpStruct Operation;
 
 		double value;
 		if (ObjectJson->TryGetNumberField("A", value))
@@ -113,30 +117,30 @@ TArray<Json2OpStruct> FFromJsonToMaterialModule::ParseJson2OpArray(const JsonMat
 	return OpArray;
 }
 
-TArray<JsonConstFloatVariable> FFromJsonToMaterialModule::ParseJsonConstVariables(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialConstFloatVariable> FFromJsonToMaterialModule::ParseJsonConstVariables(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonConstFloatVariable> VariablesArray;
+	TArray<MaterialConstFloatVariable> VariablesArray;
 	TArray<TSharedPtr<FJsonValue>> JsonVariablesArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonVariablesArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonVariablesArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonConstFloatVariable Variable;
+		MaterialConstFloatVariable Variable;
 		Variable.Value = (float)ObjectJson->GetNumberField("Value");
 		VariablesArray.Add(Variable);
 	}
 	return VariablesArray;
 }
 
-TArray<JsonConst2FloatVariable> FFromJsonToMaterialModule::ParseJsonConst2Variables(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialConst2FloatVariable> FFromJsonToMaterialModule::ParseJsonConst2Variables(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonConst2FloatVariable> VariablesArray;
+	TArray<MaterialConst2FloatVariable> VariablesArray;
 	TArray<TSharedPtr<FJsonValue>> JsonVariablesArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonVariablesArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonVariablesArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonConst2FloatVariable Variable;
+		MaterialConst2FloatVariable Variable;
 		Variable.Value1 = (float)ObjectJson->GetNumberField("Value1");
 		Variable.Value2 = (float)ObjectJson->GetNumberField("Value2");
 		VariablesArray.Add(Variable);
@@ -144,15 +148,15 @@ TArray<JsonConst2FloatVariable> FFromJsonToMaterialModule::ParseJsonConst2Variab
 	return VariablesArray;
 }
 
-TArray<JsonScalarParameter> FFromJsonToMaterialModule::ParseJsonScalarParameterVariables(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialScalarParameter> FFromJsonToMaterialModule::ParseJsonScalarParameterVariables(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonScalarParameter> ScalarParameterVariablesArray;
+	TArray<MaterialScalarParameter> ScalarParameterVariablesArray;
 	TArray<TSharedPtr<FJsonValue>> JsonScalarParameterVariablesArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonScalarParameterVariablesArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonScalarParameterVariablesArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonScalarParameter ScalarParameterVariable;
+		MaterialScalarParameter ScalarParameterVariable;
 		ScalarParameterVariable.Name = ObjectJson->GetStringField("ScalarName");
 		ScalarParameterVariable.Value = (float)ObjectJson->GetNumberField("Value");
 		ScalarParameterVariablesArray.Add(ScalarParameterVariable);
@@ -160,15 +164,15 @@ TArray<JsonScalarParameter> FFromJsonToMaterialModule::ParseJsonScalarParameterV
 	return ScalarParameterVariablesArray;
 }
 
-TArray<JsonSine> FFromJsonToMaterialModule::ParseJsonSines(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialSine> FFromJsonToMaterialModule::ParseJsonSines(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonSine> SineArray;
+	TArray<MaterialSine> SineArray;
 	TArray<TSharedPtr<FJsonValue>> JsonSineArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonSineArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonSineArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonSine Sine;
+		MaterialSine Sine;
 		double value;
 		if (ObjectJson->TryGetNumberField("Period", value))
 		{
@@ -184,15 +188,15 @@ TArray<JsonSine> FFromJsonToMaterialModule::ParseJsonSines(const TSharedPtr<FJso
 	return SineArray;
 }
 
-TArray<JsonConstantBias> FFromJsonToMaterialModule::ParseJsonConstantBias(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialConstantBias> FFromJsonToMaterialModule::ParseJsonConstantBias(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonConstantBias> ConBiasArray;
+	TArray<MaterialConstantBias> ConBiasArray;
 	TArray<TSharedPtr<FJsonValue>> JsonConBiasArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonConBiasArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonConBiasArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonConstantBias ConBias;
+		MaterialConstantBias ConBias;
 		FString Param = ObjectJson->GetStringField("Scale");
 		ConBias.ConScale = Param;
 		ConBiasArray.Add(ConBias);
@@ -200,15 +204,15 @@ TArray<JsonConstantBias> FFromJsonToMaterialModule::ParseJsonConstantBias(const 
 	return ConBiasArray;
 }
 
-TArray<JsonLerp> FFromJsonToMaterialModule::ParseJsonLerp(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialLerp> FFromJsonToMaterialModule::ParseJsonLerp(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonLerp> LerpArray;
+	TArray<MaterialLerp> LerpArray;
 	TArray<TSharedPtr<FJsonValue>> JsonLerpArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonLerpArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonLerpArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonLerp Lerp;
+		MaterialLerp Lerp;
 		double value;
 		if (ObjectJson->TryGetNumberField("A", value))
 		{
@@ -244,15 +248,15 @@ TArray<JsonLerp> FFromJsonToMaterialModule::ParseJsonLerp(const TSharedPtr<FJson
 	return LerpArray;
 }
 
-TArray<JsonSphereMask> FFromJsonToMaterialModule::ParseJsonSphereMask(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialSphereMask> FFromJsonToMaterialModule::ParseJsonSphereMask(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonSphereMask> SphereMaskArray;
+	TArray<MaterialSphereMask> SphereMaskArray;
 	TArray<TSharedPtr<FJsonValue>> JsonSphereMaskArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonSphereMaskArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonSphereMaskArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonSphereMask SphereMask;
+		MaterialSphereMask SphereMask;
 
 		FString Param = ObjectJson->GetStringField("A");
 		SphereMask.ConA = Param;
@@ -285,15 +289,15 @@ TArray<JsonSphereMask> FFromJsonToMaterialModule::ParseJsonSphereMask(const TSha
 	return SphereMaskArray;
 }
 
-TArray<JsonOneMinus> FFromJsonToMaterialModule::ParseJsonOneMinus(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialOneMinus> FFromJsonToMaterialModule::ParseJsonOneMinus(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonOneMinus> OneMinusArray;
+	TArray<MaterialOneMinus> OneMinusArray;
 	TArray<TSharedPtr<FJsonValue>> JsonOneMinusArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonOneMinusArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonOneMinusArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonOneMinus OneMinus;
+		MaterialOneMinus OneMinus;
 		FString Param = ObjectJson->GetStringField("Value");
 		OneMinus.Value = Param;
 		OneMinusArray.Add(OneMinus);
@@ -301,15 +305,15 @@ TArray<JsonOneMinus> FFromJsonToMaterialModule::ParseJsonOneMinus(const TSharedP
 	return OneMinusArray;
 }
 
-TArray<JsonSaturate> FFromJsonToMaterialModule::ParseJsonSaturate(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialSaturate> FFromJsonToMaterialModule::ParseJsonSaturate(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonSaturate> SaturateArray;
+	TArray<MaterialSaturate> SaturateArray;
 	TArray<TSharedPtr<FJsonValue>> JsonOneMinusArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonOneMinusArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonOneMinusArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonSaturate Saturate;
+		MaterialSaturate Saturate;
 		FString Param = ObjectJson->GetStringField("Value");
 		Saturate.Value = Param;
 		SaturateArray.Add(Saturate);
@@ -317,15 +321,15 @@ TArray<JsonSaturate> FFromJsonToMaterialModule::ParseJsonSaturate(const TSharedP
 	return SaturateArray;
 }
 
-TArray<JsonTransformPosition> FFromJsonToMaterialModule::ParseJsonTransformPosition(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialTransformPosition> FFromJsonToMaterialModule::ParseJsonTransformPosition(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonTransformPosition> TransformPositionArray;
+	TArray<MaterialTransformPosition> TransformPositionArray;
 	TArray<TSharedPtr<FJsonValue>> JsonTransformPositionArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonTransformPositionArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonTransformPositionArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonTransformPosition TransformPosition;
+		MaterialTransformPosition TransformPosition;
 		FString Param = ObjectJson->GetStringField("Value");
 		TransformPosition.ConTransform = Param;
 		TransformPositionArray.Add(TransformPosition);
@@ -333,15 +337,15 @@ TArray<JsonTransformPosition> FFromJsonToMaterialModule::ParseJsonTransformPosit
 	return TransformPositionArray;
 }
 
-TArray<JsonPanner> FFromJsonToMaterialModule::ParseJsonPanner(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialPanner> FFromJsonToMaterialModule::ParseJsonPanner(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonPanner> PannerArray;
+	TArray<MaterialPanner> PannerArray;
 	TArray<TSharedPtr<FJsonValue>> JsonPannerArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonPannerArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonPannerArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonPanner Panner;
+		MaterialPanner Panner;
 		FString Param = ObjectJson->GetStringField("Coordinate");
 		Panner.Coordinate = Param;
 		Param = ObjectJson->GetStringField("Time");
@@ -353,15 +357,15 @@ TArray<JsonPanner> FFromJsonToMaterialModule::ParseJsonPanner(const TSharedPtr<F
 	return PannerArray;
 }
 
-TArray<JsonMask> FFromJsonToMaterialModule::ParseJsonMask(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialMask> FFromJsonToMaterialModule::ParseJsonMask(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonMask> MaskArray;
+	TArray<MaterialMask> MaskArray;
 	TArray<TSharedPtr<FJsonValue>> JsonMaskArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonMaskArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonMaskArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonMask Mask;
+		MaterialMask Mask;
 		Mask.R = ObjectJson->GetIntegerField("R");
 		Mask.G = ObjectJson->GetIntegerField("G");
 		Mask.B = ObjectJson->GetIntegerField("B");
@@ -372,15 +376,15 @@ TArray<JsonMask> FFromJsonToMaterialModule::ParseJsonMask(const TSharedPtr<FJson
 	return MaskArray;
 }
 
-TArray<JsonTextureSample> FFromJsonToMaterialModule::ParseJsonTextureSample(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialTextureSample> FFromJsonToMaterialModule::ParseJsonTextureSample(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonTextureSample> TextureSampleArray;
+	TArray<MaterialTextureSample> TextureSampleArray;
 	TArray<TSharedPtr<FJsonValue>> JsonTextureSampleArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonTextureSampleArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonTextureSampleArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonTextureSample TextureSample;
+		MaterialTextureSample TextureSample;
 		TextureSample.UVs = ObjectJson->GetStringField("UVs");
 		TextureSample.Tex = ObjectJson->GetStringField("Tex");
 		TextureSample.ApplyViewMipBias = ObjectJson->GetStringField("ApplyViewMipBias");
@@ -390,15 +394,15 @@ TArray<JsonTextureSample> FFromJsonToMaterialModule::ParseJsonTextureSample(cons
 	return TextureSampleArray;
 }
 
-TArray<JsonCustomExpression> FFromJsonToMaterialModule::ParseJsonCustomExpression(const TSharedPtr<FJsonObject> Json, const FString Field) const
+TArray<MaterialCustomExpression> FFromJsonToMaterialModule::ParseJsonCustomExpression(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
-	TArray<JsonCustomExpression> CustomExpressionArray;
+	TArray<MaterialCustomExpression> CustomExpressionArray;
 	TArray<TSharedPtr<FJsonValue>> JsonCustomExpressionArray = Json->GetArrayField((TEXT("%s"), Field));
 	for (int32 Index = 0; Index < JsonCustomExpressionArray.Num(); Index++)
 	{
 		TSharedPtr<FJsonValue> ValueJson = JsonCustomExpressionArray[Index];
 		TSharedPtr<FJsonObject> ObjectJson = ValueJson->AsObject();
-		JsonCustomExpression CustomExpression;
+		MaterialCustomExpression CustomExpression;
 		CustomExpression.Code = ObjectJson->GetStringField("Code");
 		CustomExpression.OutputType = ObjectJson->GetIntegerField("OutputType");
 		CustomExpressionArray.Add(CustomExpression);
@@ -406,20 +410,20 @@ TArray<JsonCustomExpression> FFromJsonToMaterialModule::ParseJsonCustomExpressio
 	return CustomExpressionArray;
 }
 
-JsonMaterialOption FFromJsonToMaterialModule::ParseJsonMaterialOption(const TSharedPtr<FJsonObject> Json, const FString Field) const
+MaterialOption FFromJsonToMaterialModule::ParseJsonMaterialOption(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
 	const TSharedPtr<FJsonObject> ObjectJson = Json->GetObjectField((TEXT("%s"), Field));
-	JsonMaterialOption Option;
+	MaterialOption Option;
 	Option.MaterialDomain = ObjectJson->GetIntegerField("MaterialDomain");
 	Option.MaterialBlendMode = ObjectJson->GetIntegerField("MaterialBlendMode");
 	Option.MaterialShadingModel = ObjectJson->GetIntegerField("MaterialShadingModel");
 	return Option;
 }
 
-JsonAppearance FFromJsonToMaterialModule::ParseJsonAppearance(const TSharedPtr<FJsonObject> Json, const FString Field) const
+MaterialAppearance FFromJsonToMaterialModule::ParseJsonAppearance(const TSharedPtr<FJsonObject> Json, const FString Field) const
 {
 	const TSharedPtr<FJsonObject> ObjectJson = Json->GetObjectField((TEXT("%s"), Field));
-	JsonAppearance Appearance;
+	MaterialAppearance Appearance;
 	FString Param = ObjectJson->GetStringField("BaseColor");
 	Appearance.ConBaseColor = Param;
 	Param = ObjectJson->GetStringField("Metallic");
@@ -431,7 +435,7 @@ JsonAppearance FFromJsonToMaterialModule::ParseJsonAppearance(const TSharedPtr<F
 	return Appearance;
 }
 
-void FFromJsonToMaterialModule::FromStructToMaterial(const JsonMaterialStruct InMat)
+void FFromJsonToMaterialModule::FromStructToMaterial(const MaterialStruct InMat)
 {
 	UMaterialFactoryNew* NewMaterial = NewObject<UMaterialFactoryNew>();
 
@@ -445,7 +449,7 @@ void FFromJsonToMaterialModule::FromStructToMaterial(const JsonMaterialStruct In
 
 	MaterialCasted->Modify();
 
-	for (Json2OpStruct Operation : InMat.Operation)
+	for (Material2OpStruct Operation : InMat.Operation)
 	{
 		(this->* * OperationCreator.Find(Operation.Operation))(MaterialCasted, Operation);
 	}
@@ -518,7 +522,7 @@ void FFromJsonToMaterialModule::FromStructToMaterial(const JsonMaterialStruct In
 
 	ConnectAllBesideAppearance(MaterialCasted, Connection);
 
-	SetMaterialOption(MaterialCasted, InMat.MaterialOption);
+	SetMaterialOption(MaterialCasted, InMat.MaterialOptions);
 
 	ConnectAppearance(MaterialCasted, InMat.Appearance);
 
@@ -527,7 +531,7 @@ void FFromJsonToMaterialModule::FromStructToMaterial(const JsonMaterialStruct In
 	Connection.Empty();
 }
 
-TArray<UMaterialExpressionVectorParameter*> FFromJsonToMaterialModule::FromArrayColorStructToNode(UMaterial* OuterMat, const TArray<JsonColorStruct> InColors)
+TArray<UMaterialExpressionVectorParameter*> FFromJsonToMaterialModule::FromArrayColorStructToNode(UMaterial* OuterMat, const TArray<MaterialColorStruct> InColors)
 {
 	TArray<UMaterialExpressionVectorParameter*> ColorsNode;
 	for (int32 Index = 0; Index < InColors.Num(); Index++)
@@ -542,7 +546,7 @@ TArray<UMaterialExpressionVectorParameter*> FFromJsonToMaterialModule::FromArray
 	return ColorsNode;
 }
 
-TArray<UMaterialExpressionConstant*> FFromJsonToMaterialModule::FromArrayConstVarStructToNode(UMaterial* OuterMat, const TArray<JsonConstFloatVariable> InVar)
+TArray<UMaterialExpressionConstant*> FFromJsonToMaterialModule::FromArrayConstVarStructToNode(UMaterial* OuterMat, const TArray<MaterialConstFloatVariable> InVar)
 {
 	TArray<UMaterialExpressionConstant*> VariablesNode;
 
@@ -557,7 +561,7 @@ TArray<UMaterialExpressionConstant*> FFromJsonToMaterialModule::FromArrayConstVa
 	return VariablesNode;
 }
 
-TArray<UMaterialExpressionConstant2Vector*> FFromJsonToMaterialModule::FromArrayConst2VarStructToNode(UMaterial* OuterMat, const TArray<JsonConst2FloatVariable> InVars)
+TArray<UMaterialExpressionConstant2Vector*> FFromJsonToMaterialModule::FromArrayConst2VarStructToNode(UMaterial* OuterMat, const TArray<MaterialConst2FloatVariable> InVars)
 {
 	TArray<UMaterialExpressionConstant2Vector*> VariablesNode;
 
@@ -573,7 +577,7 @@ TArray<UMaterialExpressionConstant2Vector*> FFromJsonToMaterialModule::FromArray
 	return VariablesNode;
 }
 
-TArray<UMaterialExpressionScalarParameter*> FFromJsonToMaterialModule::FromArrayScalarParameterVarStructToNode(UMaterial* OuterMat, const TArray<JsonScalarParameter> InVar)
+TArray<UMaterialExpressionScalarParameter*> FFromJsonToMaterialModule::FromArrayScalarParameterVarStructToNode(UMaterial* OuterMat, const TArray<MaterialScalarParameter> InVar)
 {
 	TArray<UMaterialExpressionScalarParameter*> ScalarParameterVariablesNode;
 
@@ -589,10 +593,10 @@ TArray<UMaterialExpressionScalarParameter*> FFromJsonToMaterialModule::FromArray
 	return ScalarParameterVariablesNode;
 }
 
-TArray<UMaterialExpressionSine*> FFromJsonToMaterialModule::FromArraySineStructToNode(UMaterial* OuterMat, const TArray<JsonSine> InSines)
+TArray<UMaterialExpressionSine*> FFromJsonToMaterialModule::FromArraySineStructToNode(UMaterial* OuterMat, const TArray<MaterialSine> InSines)
 {
 	TArray<UMaterialExpressionSine*> Sines;
-	for (JsonSine InSine : InSines)
+	for (MaterialSine InSine : InSines)
 	{
 		UMaterialExpressionSine* Sine = NewObject<UMaterialExpressionSine>(OuterMat);
 		if (InSine.ConPeriod.IsEmpty())
@@ -615,10 +619,10 @@ TArray<UMaterialExpressionSine*> FFromJsonToMaterialModule::FromArraySineStructT
 	return Sines;
 }
 
-TArray<UMaterialExpressionConstantBiasScale*> FFromJsonToMaterialModule::FromArrayConstantBiasStructToNode(UMaterial* OuterMat, const TArray<JsonConstantBias> InBiass)
+TArray<UMaterialExpressionConstantBiasScale*> FFromJsonToMaterialModule::FromArrayConstantBiasStructToNode(UMaterial* OuterMat, const TArray<MaterialConstantBias> InBiass)
 {
 	TArray<UMaterialExpressionConstantBiasScale*> ConBiasArr;
-	for (JsonConstantBias InBias : InBiass)
+	for (MaterialConstantBias InBias : InBiass)
 	{
 		UMaterialExpressionConstantBiasScale* Bias = NewObject<UMaterialExpressionConstantBiasScale>(OuterMat);
 		if (!InBias.ConScale.IsEmpty())
@@ -637,10 +641,10 @@ TArray<UMaterialExpressionConstantBiasScale*> FFromJsonToMaterialModule::FromArr
 	return ConBiasArr;
 }
 
-TArray<UMaterialExpressionLinearInterpolate*> FFromJsonToMaterialModule::FromArrayLerpStructToNode(UMaterial* OuterMat, const TArray<JsonLerp> InLerps)
+TArray<UMaterialExpressionLinearInterpolate*> FFromJsonToMaterialModule::FromArrayLerpStructToNode(UMaterial* OuterMat, const TArray<MaterialLerp> InLerps)
 {
 	TArray<UMaterialExpressionLinearInterpolate*> LerpArr;
-	for (JsonLerp InLerp : InLerps)
+	for (MaterialLerp InLerp : InLerps)
 	{
 		UMaterialExpressionLinearInterpolate* Lerp = NewObject<UMaterialExpressionLinearInterpolate>(OuterMat);
 		if (InLerp.ConA.IsEmpty())
@@ -688,10 +692,10 @@ TArray<UMaterialExpressionLinearInterpolate*> FFromJsonToMaterialModule::FromArr
 	return LerpArr;
 }
 
-TArray<UMaterialExpressionSphereMask*> FFromJsonToMaterialModule::FromArraySphereMaskStructToNode(UMaterial* OuterMat, const TArray<JsonSphereMask> InSpheres)
+TArray<UMaterialExpressionSphereMask*> FFromJsonToMaterialModule::FromArraySphereMaskStructToNode(UMaterial* OuterMat, const TArray<MaterialSphereMask> InSpheres)
 {
 	TArray<UMaterialExpressionSphereMask*> SphereMaskArr;
-	for (JsonSphereMask InSphere : InSpheres)
+	for (MaterialSphereMask InSphere : InSpheres)
 	{
 		UMaterialExpressionSphereMask* SphereMask = NewObject<UMaterialExpressionSphereMask>(OuterMat);
 		if (!InSphere.ConA.IsEmpty())
@@ -745,10 +749,10 @@ TArray<UMaterialExpressionSphereMask*> FFromJsonToMaterialModule::FromArraySpher
 	return SphereMaskArr;
 }
 
-TArray<UMaterialExpressionOneMinus*> FFromJsonToMaterialModule::FromArrayOneMinusStructToNode(UMaterial* OuterMat, const TArray<JsonOneMinus> InOneMinuses)
+TArray<UMaterialExpressionOneMinus*> FFromJsonToMaterialModule::FromArrayOneMinusStructToNode(UMaterial* OuterMat, const TArray<MaterialOneMinus> InOneMinuses)
 {
 	TArray<UMaterialExpressionOneMinus*> OneMinusArr;
-	for (JsonOneMinus InOneMinus : InOneMinuses)
+	for (MaterialOneMinus InOneMinus : InOneMinuses)
 	{
 		UMaterialExpressionOneMinus* OneMinus = NewObject<UMaterialExpressionOneMinus>(OuterMat);
 		if (!InOneMinus.Value.IsEmpty())
@@ -767,10 +771,10 @@ TArray<UMaterialExpressionOneMinus*> FFromJsonToMaterialModule::FromArrayOneMinu
 	return OneMinusArr;
 }
 
-TArray<UMaterialExpressionSaturate*> FFromJsonToMaterialModule::FromArraySaturateStructToNode(UMaterial* OuterMat, const TArray<JsonSaturate> InSaturates)
+TArray<UMaterialExpressionSaturate*> FFromJsonToMaterialModule::FromArraySaturateStructToNode(UMaterial* OuterMat, const TArray<MaterialSaturate> InSaturates)
 {
 	TArray<UMaterialExpressionSaturate*> SaturatesArr;
-	for (JsonSaturate InSaturate : InSaturates)
+	for (MaterialSaturate InSaturate : InSaturates)
 	{
 		UMaterialExpressionSaturate* Saturate = NewObject<UMaterialExpressionSaturate>(OuterMat);
 		if (!InSaturate.Value.IsEmpty())
@@ -789,10 +793,10 @@ TArray<UMaterialExpressionSaturate*> FFromJsonToMaterialModule::FromArraySaturat
 	return SaturatesArr;
 }
 
-TArray<UMaterialExpressionTransformPosition*> FFromJsonToMaterialModule::FromArrayTransformPositionStructToNode(UMaterial* OuterMat, const TArray<JsonTransformPosition> InTransforms)
+TArray<UMaterialExpressionTransformPosition*> FFromJsonToMaterialModule::FromArrayTransformPositionStructToNode(UMaterial* OuterMat, const TArray<MaterialTransformPosition> InTransforms)
 {
 	TArray<UMaterialExpressionTransformPosition*> TransformPositionArr;
-	for (JsonTransformPosition InTransform : InTransforms)
+	for (MaterialTransformPosition InTransform : InTransforms)
 	{
 		UMaterialExpressionTransformPosition* TransformPosition = NewObject<UMaterialExpressionTransformPosition>(OuterMat);
 		TransformPosition->TransformSourceType = EMaterialPositionTransformSource::TRANSFORMPOSSOURCE_World;
@@ -812,10 +816,10 @@ TArray<UMaterialExpressionTransformPosition*> FFromJsonToMaterialModule::FromArr
 	return TransformPositionArr;
 }
 
-TArray<UMaterialExpressionComponentMask*> FFromJsonToMaterialModule::FromArrayMaskStructToNode(UMaterial* OuterMat, const TArray<JsonMask> InMasks)
+TArray<UMaterialExpressionComponentMask*> FFromJsonToMaterialModule::FromArrayMaskStructToNode(UMaterial* OuterMat, const TArray<MaterialMask> InMasks)
 {
 	TArray<UMaterialExpressionComponentMask*> MaskArr;
-	for (JsonMask InMask : InMasks)
+	for (MaterialMask InMask : InMasks)
 	{
 		UMaterialExpressionComponentMask* Mask = NewObject<UMaterialExpressionComponentMask>(OuterMat);
 		if (!InMask.Value.IsEmpty())
@@ -838,10 +842,10 @@ TArray<UMaterialExpressionComponentMask*> FFromJsonToMaterialModule::FromArrayMa
 	return MaskArr;
 }
 
-TArray<UMaterialExpressionPanner*> FFromJsonToMaterialModule::FromArrayPannerStructToNode(UMaterial* OuterMat, const TArray<JsonPanner> InPanners)
+TArray<UMaterialExpressionPanner*> FFromJsonToMaterialModule::FromArrayPannerStructToNode(UMaterial* OuterMat, const TArray<MaterialPanner> InPanners)
 {
 	TArray<UMaterialExpressionPanner*> PannerArr;
-	for (JsonPanner InPanner : InPanners)
+	for (MaterialPanner InPanner : InPanners)
 	{
 		UMaterialExpressionPanner* Panner = NewObject<UMaterialExpressionPanner>(OuterMat);
 		if (!InPanner.Coordinate.IsEmpty())
@@ -876,10 +880,10 @@ TArray<UMaterialExpressionPanner*> FFromJsonToMaterialModule::FromArrayPannerStr
 	return PannerArr;
 }
 
-TArray<UMaterialExpressionTextureSample*> FFromJsonToMaterialModule::FromArrayTextureSampleStructToNode(UMaterial* OuterMat, const TArray<JsonTextureSample> InTextures)
+TArray<UMaterialExpressionTextureSample*> FFromJsonToMaterialModule::FromArrayTextureSampleStructToNode(UMaterial* OuterMat, const TArray<MaterialTextureSample> InTextures)
 {
 	TArray<UMaterialExpressionTextureSample*> TextureSampleArr;
-	for (JsonTextureSample InTexture : InTextures)
+	for (MaterialTextureSample InTexture : InTextures)
 	{
 		UMaterialExpressionTextureSample* TextureSample = NewObject<UMaterialExpressionTextureSample>(OuterMat);
 		if (!InTexture.UVs.IsEmpty())
@@ -921,10 +925,10 @@ TArray<UMaterialExpressionTextureSample*> FFromJsonToMaterialModule::FromArrayTe
 	return TextureSampleArr;
 }
 
-TArray<UMaterialExpressionCustom*> FFromJsonToMaterialModule::FromArrayCustomExpressionStructToNode(UMaterial* OuterMat, const TArray<JsonCustomExpression> InCustoms)
+TArray<UMaterialExpressionCustom*> FFromJsonToMaterialModule::FromArrayCustomExpressionStructToNode(UMaterial* OuterMat, const TArray<MaterialCustomExpression> InCustoms)
 {
 	TArray<UMaterialExpressionCustom*> CustomExpressionArr;
-	for (JsonCustomExpression InCustom : InCustoms)
+	for (MaterialCustomExpression InCustom : InCustoms)
 	{
 		UMaterialExpressionCustom* CustomExpression = NewObject<UMaterialExpressionCustom>(OuterMat);
 		if (!InCustom.Code.IsEmpty())
@@ -954,14 +958,14 @@ void FFromJsonToMaterialModule::ConnectAllBesideAppearance(UMaterial* InMat, TAr
 	}
 }
 
-void FFromJsonToMaterialModule::SetMaterialOption(UMaterial* OuterMat, const JsonMaterialOption InOption)
+void FFromJsonToMaterialModule::SetMaterialOption(UMaterial* OuterMat, const MaterialOption InOption)
 {
 	OuterMat->MaterialDomain = static_cast<EMaterialDomain>(InOption.MaterialDomain);
 	OuterMat->BlendMode = static_cast<EBlendMode>(InOption.MaterialBlendMode);
 	OuterMat->SetShadingModel(static_cast<EMaterialShadingModel>(InOption.MaterialShadingModel));
 }
 
-void FFromJsonToMaterialModule::ConnectAppearance(UMaterial* OuterMat, const JsonAppearance InApp)
+void FFromJsonToMaterialModule::ConnectAppearance(UMaterial* OuterMat, const MaterialAppearance InApp)
 {
 	if (!InApp.ConBaseColor.IsEmpty())
 	{
@@ -1026,7 +1030,7 @@ void FFromJsonToMaterialModule::ConnectAppearance(UMaterial* OuterMat, const Jso
 	}
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreateMultiply(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreateMultiply(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionMultiply* Multiply = NewObject<UMaterialExpressionMultiply>(OuterMat);
 	if (Op.ConA.IsEmpty())
@@ -1060,7 +1064,7 @@ UMaterialExpression* FFromJsonToMaterialModule::CreateMultiply(UMaterial* OuterM
 	return Multiply;
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreateAppend(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreateAppend(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionAppendVector* Append = NewObject<UMaterialExpressionAppendVector>(OuterMat);
 	if (!Op.ConA.IsEmpty())
@@ -1084,7 +1088,7 @@ UMaterialExpression* FFromJsonToMaterialModule::CreateAppend(UMaterial* OuterMat
 	return Append;
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreateAdd(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreateAdd(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionAdd* Add = NewObject<UMaterialExpressionAdd>(OuterMat);
 	if (!Op.ConA.IsEmpty())
@@ -1108,7 +1112,7 @@ UMaterialExpression* FFromJsonToMaterialModule::CreateAdd(UMaterial* OuterMat, c
 	return Add;
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreateSubstract(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreateSubstract(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionSubtract* Sub = NewObject<UMaterialExpressionSubtract>(OuterMat);
 	if (!Op.ConA.IsEmpty())
@@ -1132,7 +1136,7 @@ UMaterialExpression* FFromJsonToMaterialModule::CreateSubstract(UMaterial* Outer
 	return Sub;
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreatePower(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreatePower(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionPower* Power = NewObject<UMaterialExpressionPower>(OuterMat);
 	if (!Op.ConA.IsEmpty())
@@ -1156,7 +1160,7 @@ UMaterialExpression* FFromJsonToMaterialModule::CreatePower(UMaterial* OuterMat,
 	return Power;
 }
 
-UMaterialExpression* FFromJsonToMaterialModule::CreateDivide(UMaterial* OuterMat, const Json2OpStruct Op)
+UMaterialExpression* FFromJsonToMaterialModule::CreateDivide(UMaterial* OuterMat, const Material2OpStruct Op)
 {
 	UMaterialExpressionDivide* Divide = NewObject<UMaterialExpressionDivide>(OuterMat);
 	if (!Op.ConA.IsEmpty())
@@ -1180,30 +1184,36 @@ UMaterialExpression* FFromJsonToMaterialModule::CreateDivide(UMaterial* OuterMat
 	return Divide;
 }
 
+void FFromJsonToMaterialModule::CreateMaterialFromPath(FString Path)
+{
+	FString JsonStr;
+	FFileHelper::LoadFileToString(JsonStr, *Path);
+	TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonStr);
+	TSharedPtr<FJsonObject> JsonParsed = MakeShareable(new FJsonObject);
+	TArray<MaterialStruct> Materials;
+	if (FJsonSerializer::Deserialize(JsonReader, JsonParsed) && JsonParsed.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Converting"));
+		Materials = ParseJsonMaterialArray(JsonParsed, "Materials");
+		for (MaterialStruct Material : Materials)
+		{
+			FromStructToMaterial(Material);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Json not correct"));
+	}
+}
+
+
+
 bool FFromJsonToMaterialModule::Exec(UWorld* InWorld, const TCHAR* Cmd, FOutputDevice& Ar)
 {
 	if (FParse::Command(&Cmd, TEXT("newmaterial")))
 	{
 		FString Path = (TEXT("%s"), Cmd);
-		FString JsonStr;
-		FFileHelper::LoadFileToString(JsonStr, *Path);
-		TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(JsonStr);
-		TSharedPtr<FJsonObject> JsonParsed = MakeShareable(new FJsonObject);
-		TArray<JsonMaterialStruct> Materials;
-
-		if (FJsonSerializer::Deserialize(JsonReader, JsonParsed) && JsonParsed.IsValid())
-		{
-			UE_LOG(LogTemp, Error, TEXT("Converting"));
-			Materials = ParseJsonMaterialArray(JsonParsed, "Materials");
-			for (JsonMaterialStruct Material : Materials)
-			{
-				FromStructToMaterial(Material);
-			}
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("Json not correct"));
-		}
+		CreateMaterialFromPath(Path);
 		return true;
 	}
 	return false;
