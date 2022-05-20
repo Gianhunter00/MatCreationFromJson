@@ -44,7 +44,7 @@ Documentation for the form of the json file can be found inside the same folder 
 
 ## UI
 UI Window for the JsonMaterial plugin can be found under Window/Developer Tools/JsonEditorPlugin
-![MatCreationFromJson - Unreal Editor 20_05_2022 19_06_34](https://user-images.githubusercontent.com/23010885/169578093-51370b40-02a8-4ace-9b2a-08cb11db2da1.png)![MatCreationFromJson - Unreal Editor 20_05_2022 18_50_11](https://user-images.githubusercontent.com/23010885/169577946-a97c0bf2-ee00-41f0-967c-b3f1bf06ceaa.png)
+![MatCreationFromJson - Unreal Editor 20_05_2022 19_06_34](https://user-images.githubusercontent.com/23010885/169578701-6dfed6dd-37dd-4af9-b175-e477ede20ac7.png)
 
 Open File Dialog to choose the Json
 And Create Material to create the Json from the selected file
