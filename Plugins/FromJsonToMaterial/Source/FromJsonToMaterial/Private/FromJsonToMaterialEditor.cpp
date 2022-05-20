@@ -27,9 +27,23 @@ TSharedRef<SDockTab> FromJsonToMaterialEditor::OnSpawnNomad(const FSpawnTabArgs&
 				SNew(SVerticalBox)
 				+SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8).HAlign(EHorizontalAlignment::HAlign_Center)
 				[
+					SNew(SHorizontalBox)
+					+SHorizontalBox::Slot().Padding(0, 0, 0, 8).HAlign(EHorizontalAlignment::HAlign_Center)
+					[
+						SAssignNew(PathText, SEditableTextBox).MinDesiredWidth(100)
+					]
+					+SHorizontalBox::Slot().Padding(0, 0, 0, 8).HAlign(EHorizontalAlignment::HAlign_Center)
+					[
+						SNew(SButton)
+						.Text(LOCTEXT("OpenFileDialog", "Open File Dialog"))
+						.OnClicked_Raw(this, &FromJsonToMaterialEditor::OpenFileDialog)
+					]
+				]
+				+SVerticalBox::Slot().AutoHeight().Padding(0, 0, 0, 8).HAlign(EHorizontalAlignment::HAlign_Center)
+				[
 					SNew(SButton)
-					.Text(LOCTEXT("OpenFileDialog", "Open File Dialog"))
-					.OnClicked_Raw(this, &FromJsonToMaterialEditor::OpenFileDialog)
+					.Text(LOCTEXT("CreateMaterial", "Create Material"))
+					.OnClicked_Raw(this, &FromJsonToMaterialEditor::CreateMaterial)
 				]
 			]
 		];
@@ -45,17 +59,27 @@ FReply FromJsonToMaterialEditor::OpenFileDialog()
 			//Opening the file picker!
 			uint32 SelectionFlag = 0; //A value of 0 represents single file selection while a value of 1 represents multiple file selection
 			DesktopPlatform->OpenFileDialog(nullptr, DialogTitle, DefaultPath, FString(""), FileTypes, SelectionFlag, OutFileNamesChoice);
-			Path = OutFileNamesChoice[0];
+			Path = FPaths::ConvertRelativePathToFull(OutFileNamesChoice[0]);
+			UE_LOG(LogTemp, Error, TEXT("%s"), *OutFileNamesChoice[0])
+			PathText->SetText(FText::FromString(Path));
+		}
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+
+FReply FromJsonToMaterialEditor::CreateMaterial()
+{
+	if (!Path.IsEmpty())
+	{
+		if (FPaths::FileExists(Path))
+		{
 			if (OnPathChosenFromDialog->IsBound())
 			{
 				OnPathChosenFromDialog->Execute(Path);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("Not Bound"));
+				return FReply::Handled();
 			}
 		}
-		return FReply::Handled();
 	}
 	return FReply::Unhandled();
 }

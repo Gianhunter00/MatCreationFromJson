@@ -11,6 +11,7 @@
 #include "Misc/MessageDialog.h"
 #include "Widgets/Docking/SDockTab.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Text/STextBlock.h"
 #include "WorkspaceMenuStructure.h"
 #include "WorkspaceMenuStructureModule.h"
 
@@ -24,11 +25,14 @@ public:
 	TSharedRef<SDockTab> OnSpawnNomad(const FSpawnTabArgs& InTabSpawnArgs);
 
 	FReply OpenFileDialog();
+	FReply CreateMaterial();
 	OnPathChosen* OnPathChosenFromDialog;
 	FString Path;
+
 private:
 	const FString DialogTitle = FString("Choose the Json file to import");
 	const FString DefaultPath = FPaths::GameSourceDir();
 	const FString FileTypes = FString("Json Material|*.json;");
 	TArray<FString> OutFileNamesChoice;
+	TSharedPtr<SEditableTextBox> PathText;
 };
