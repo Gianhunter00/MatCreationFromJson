@@ -42,5 +42,8 @@ Example Json can be found in the folder named "MaterialJsonExample"
 ## Documentation
 Documentation for the form of the json file can be found inside the same folder of the example
 
+## UI
+UI Window for the JsonMaterial plugin can be found under Window/Developer Tools/JsonEditorPlugin
+
 ## Information about this project
 This is an exercise i made to improve my skill with unreal engine and c++, if anyone is interested in it and would like to have more node, feel free to contact me and tell me the node to add.
